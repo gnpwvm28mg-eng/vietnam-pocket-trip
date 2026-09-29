@@ -220,6 +220,14 @@
         var requestedKinds = exactVenue ? [] : ["衣服", "攀岩"].filter(function (kind) { return words.indexOf(kind) !== -1; });
         var selectedKind = options.kind && options.kind !== "all" ? options.kind : requestedKinds.length === 1 ? requestedKinds[0] : null;
         var selectedWindow = options.window || "recent";
+        var publishedOnly = options.publishedOnly === true;
+        function sourceInWindow(source) {
+          if (!source) return false;
+          // A recent edit is not evidence of recent publication. This switch
+          // always uses the month boundary, even alongside the archive window.
+          if (publishedOnly) return source.dateType === 'published' && source.inMonthWindow === true;
+          return selectedWindow === 'all' || (selectedWindow === 'month' ? source.inMonthWindow === true : source.inRecentWindow === true);
+        }
         // In the curated month view, typing a theme has the same meaning as
         // choosing its chip. Incidental mentions in travel tips are not a match.
         var queryTopics = selectedWindow === 'month' && !exactVenue ? words.filter(function (word) {
@@ -233,7 +241,7 @@
         if (cityConflict) return { places: [], sources: [], terms: words, totalPlaces: 0, totalSources: 0 };
         var places = indexedPlaces.filter(function (entry) {
           return (!selectedCity || entry.place.area === selectedCity) && (!selectedKind || entry.place.kind === selectedKind) &&
-            (selectedWindow !== "month" || entry.place.sources.some(function (id) { return sourceById[id] && sourceById[id].inMonthWindow === true; })) &&
+            ((selectedWindow !== "month" && !publishedOnly) || entry.place.sources.some(function (id) { return sourceInWindow(sourceById[id]); })) &&
             groupTopicMatches(entry) &&
             (!requestedRegions.length || (requestedRegions.length === 1 && entry.region === requestedRegions[0]));
         }).map(function (entry) {
@@ -246,7 +254,7 @@
           return Object.assign({}, result.entry.place, { matchedBy: result.hit.fields.indexOf("name") !== -1 ? "名称匹配" : result.hit.fields.indexOf("detail") !== -1 ? "点单 / 说明匹配" : "区域 / 分类匹配" });
         });
         var sources = indexedSources.filter(function (entry) {
-          return (selectedWindow === "all" || (selectedWindow === "month" ? entry.source.inMonthWindow === true : entry.source.inRecentWindow === true)) &&
+          return sourceInWindow(entry.source) &&
             (!selectedCity || entry.cities.indexOf(selectedCity) !== -1) && (!selectedKind || entry.kinds.indexOf(selectedKind) !== -1) &&
             selectedTopics.every(function (topic) { return entry.kinds.some(function (kind) { return topicMatches(topic, entry.source.topics, kind, entry.source.title + " " + entry.source.summary, selectedWindow === 'month'); }); });
         }).map(function (entry) {

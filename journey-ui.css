@@ -1,0 +1,32 @@
+.journey-plan-actions {display:flex;flex-wrap:wrap;gap:7px;margin:12px 0 18px;}
+.journey-fields {display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.form-field select {width:100%;padding:11px;border:1px solid var(--line);border-radius:9px;background:#fffefa;color:var(--ink);}
+.journey-order {display:flex;justify-content:flex-end;gap:4px;margin-top:8px;border-top:1px solid var(--line);padding-top:5px;}
+.journey-order .btn-subtle {font-size:10px;min-height:36px;}
+.journey-adjust {margin-top:10px;border-top:1px solid var(--line);padding-top:8px;}
+.journey-adjust summary {font-size:11px;color:var(--muted);cursor:pointer;min-height:28px;}
+.journey-adjust .journey-order {border-top:0;margin:0;flex-wrap:wrap;}
+.return-details {padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--paper);margin:12px 0;}
+.return-details h3 {font-size:14px;margin:0 0 12px;}
+.return-details p {font-size:12px;line-height:1.8;white-space:pre-line;}
+.journey-warning-box,.region-route {border:1px solid #e3dfc9;border-radius:12px;padding:12px 14px;margin:12px 0;background:#fcf8ec;color:#7f714e;font-size:11px;}
+.journey-warning-box p,.region-route p {font-size:11px;line-height:1.7;margin:7px 0;}
+.journey-warning-box summary {cursor:pointer;font-weight:600;}
+.region-route {border-color:#dce5da;color:var(--teal);background:#eef4ec;}
+.island-regions {display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;}
+.island-regions span {border-radius:6px;padding:4px 6px;background:white;font-size:9px;}
+.origin-row {display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;padding:10px 0;border-top:1px solid var(--line);}
+.journey-detail-actions {position:sticky;top:0;background:var(--paper);z-index:2;padding-bottom:10px;}
+.route-toggle button:disabled {opacity:.55;cursor:default;}
+.discover-advanced {border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:10px 0;}
+.discover-advanced summary {font-size:11px;color:var(--teal);cursor:pointer;}
+.discover-advanced .window-toggle {margin:10px 0;}
+.discover-advanced .discover-controls {margin-bottom:0;}
+.discover-shortcuts {display:flex;justify-content:space-between;align-items:center;gap:8px;margin:8px 0 14px;}
+.discover-shortcuts p {margin:0;font-size:11px;color:var(--muted);}
+.strict-published {display:flex;align-items:center;gap:7px;font-size:11px;color:var(--ink);margin:12px 0;}
+.strict-published input {width:17px;height:17px;accent-color:var(--teal);}
+.is-discover .section-head {margin-bottom:8px;}
+.is-discover .search-intro {margin-bottom:12px;}
+.is-discover .search-help {margin:6px 0;}
+@media (max-width:360px) {.journey-fields {gap:8px;}.journey-fields input,.journey-fields select {font-size:13px;padding:9px;}}

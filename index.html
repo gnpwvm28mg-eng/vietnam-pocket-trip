@@ -8,7 +8,10 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="manifest" href="./manifest.json">
   <title>越南口袋游</title>
-  <link rel="stylesheet" href="./style.css?v=month-6">
+  <link rel="stylesheet" href="./style.css?v=journey-7">
+  <link rel="stylesheet" href="./maps.css?v=journey-7">
+  <link rel="stylesheet" href="./journey-ui.css?v=journey-7">
+  <link rel="stylesheet" href="./travel-tools.css?v=journey-7">
 </head>
 <body>
   <main class="app" id="app">
@@ -40,10 +43,12 @@
       <p class="day-summary" id="day-summary"></p>
       <div class="route-toggle" id="route-toggle" aria-label="路线方案"></div>
       <div class="route-card">
-        <div class="map-heading"><span><i class="map-dot" aria-hidden="true"></i>今天的路线地图</span><span class="map-caption">离线查看</span></div>
+        <div class="map-heading"><span><i class="map-dot" aria-hidden="true"></i>今天的路线地图</span><span class="map-caption">真实地图 · 联网查看</span></div>
         <div id="route-map" class="route-map" aria-label="当日路线地图"></div>
         <div class="route-meta" id="route-meta"></div>
       </div>
+      <div id="journey-plan-actions" class="journey-plan-actions"></div>
+      <div id="journey-warnings"></div>
       <div class="now-card" id="now-card"></div>
       <div class="list-heading"><h3>沿着这条线出发</h3><span id="plan-progress" class="progress-label"></span></div>
       <div class="cards timeline" id="day-stops"></div>
@@ -53,20 +58,24 @@
     <section class="panel hidden" id="discover-view" aria-label="吃喝玩乐搜索">
       <div class="section-head"><div><span class="section-kicker">GOOD PLACES, EASY DAYS</span><h2>下一站，去哪儿</h2></div></div>
       <p class="view-intro search-intro">吃一碗粉、逛一间店，找到下一站的小灵感。</p>
-      <div class="window-toggle" role="group" aria-label="发现日期范围"><button type="button" data-window="month" aria-pressed="true">近1个月</button><button type="button" data-window="all" aria-pressed="false">全部已收录</button></div>
-      <p id="month-window" class="window-caption"></p>
+      <div class="discover-shortcuts"><p>临时起意，也能顺路安排。</p><button class="btn btn-primary" data-journey="now" type="button">现在去哪 ↗</button></div>
       <form id="discover-search" class="discover-search" role="search" aria-label="发现搜索">
         <div class="search-box"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" stroke-width="1.8"/><path d="m15.5 15.5 5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><input id="query" type="search" aria-label="搜索地点和笔记" aria-describedby="search-help" placeholder="越南粉、衣服、攀岩馆…" autocomplete="off" enterkeyhint="search"><button id="clear-query" type="button" aria-label="清空搜索" hidden>×</button></div>
         <button class="btn btn-primary search-submit" type="submit">搜索</button>
       </form>
       <p id="search-help" class="search-help">检索已收录地点与笔记；地图和原帖需联网。</p>
       <div id="search-suggestions" class="search-suggestions" aria-label="五个旅行主题"><button type="button" data-topic="越南粉" aria-pressed="false">越南粉</button><button type="button" data-topic="特色美食" aria-pressed="false">特色美食</button><button type="button" data-topic="好玩去处" aria-pressed="false">好玩去处</button><button type="button" data-topic="好看衣服" aria-pressed="false">好看衣服</button><button type="button" data-topic="攀岩馆" aria-pressed="false">攀岩馆</button></div>
+      <details class="discover-advanced"><summary>筛选城市、类别与日期</summary>
+      <div class="window-toggle" role="group" aria-label="发现日期范围"><button type="button" data-window="month" aria-pressed="true">近1个月</button><button type="button" data-window="all" aria-pressed="false">全部已收录</button></div>
+      <label class="strict-published"><input type="checkbox" id="published-only">只看近一个月新发布（不含近期编辑）</label>
+      <p id="month-window" class="window-caption"></p>
       <div class="discover-controls">
         <div class="filter-row" id="kind-filters" role="tablist" aria-label="内容类型">
           <button class="filter active" type="button" data-kind="all">全部</button><button class="filter" type="button" data-kind="吃喝">吃喝</button><button class="filter" type="button" data-kind="玩乐">玩乐</button><button class="filter" type="button" data-kind="衣服">衣服</button><button class="filter" type="button" data-kind="攀岩">攀岩</button><button class="filter" type="button" data-kind="住宿">住宿</button><button class="filter" type="button" data-kind="交通">交通</button>
         </div>
         <label class="area-control" for="area"><span>目的地</span><select id="area"><option value="all">两地都看</option><option value="胡志明市">胡志明市</option><option value="富国岛">富国岛</option></select></label>
       </div>
+      </details>
       <div class="search-feedback" id="search-feedback"><p id="result-count" role="status" aria-live="polite" aria-atomic="true"></p><button type="button" id="reset-filters" class="btn-subtle" hidden>重置筛选</button></div>
       <div id="result-types" class="result-types" role="group" aria-label="搜索结果类型" hidden><button type="button" data-search-type="all" aria-pressed="true">全部</button><button type="button" data-search-type="places" aria-pressed="false">地点</button><button type="button" data-search-type="notes" aria-pressed="false">笔记</button></div>
       <div class="recommend-wrap" id="recommend-wrap"><div class="list-heading"><h3 id="recommend-title">顺路的好去处</h3><span class="small-label">灵感卡片</span></div><div class="cards" id="recommendations"></div></div>
@@ -87,7 +96,7 @@
       <div class="section-head"><div><span class="section-kicker">READ BEFORE YOU GO</span><h2>旅行的灵感出处</h2></div><span class="result-count" id="source-count"></span></div>
       <p class="view-intro">把真实笔记里的体验，放回你的行程里。</p>
       <label class="search-box" for="source-query"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" stroke-width="1.8"/><path d="m15.5 15.5 5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><input id="source-query" type="search" placeholder="搜标题、作者、话题" autocomplete="off"></label>
-      <div class="source-filter"><label for="source-region"><span>目的地</span><select id="source-region"><option value="all">全部地点</option><option value="胡志明市">胡志明市</option><option value="富国岛">富国岛</option></select></label><label for="source-status"><span>日期</span><select id="source-status"><option value="month" selected>近1个月</option><option value="recent">近3个月</option><option value="used">攻略采用</option><option value="all">全部笔记</option></select></label><label class="source-topic-control" for="source-topic"><span>主题</span><select id="source-topic"><option value="all">全部主题</option><option value="越南粉">越南粉</option><option value="特色美食">特色美食</option><option value="好玩去处">好玩去处</option><option value="好看衣服">好看衣服</option><option value="攀岩馆">攀岩馆</option></select></label></div>
+      <div class="source-filter"><label for="source-region"><span>目的地</span><select id="source-region"><option value="all">全部地点</option><option value="胡志明市">胡志明市</option><option value="富国岛">富国岛</option></select></label><label for="source-status"><span>日期</span><select id="source-status"><option value="month" selected>近1个月</option><option value="published">近月新发布</option><option value="recent">近3个月</option><option value="used">攻略采用</option><option value="all">全部笔记</option></select></label><label class="source-topic-control" for="source-topic"><span>主题</span><select id="source-topic"><option value="all">全部主题</option><option value="越南粉">越南粉</option><option value="特色美食">特色美食</option><option value="好玩去处">好玩去处</option><option value="好看衣服">好看衣服</option><option value="攀岩馆">攀岩馆</option></select></label></div>
       <p id="source-window" class="window-caption"></p>
       <details class="method-box"><summary>这些笔记怎么用</summary><div id="source-method"></div></details>
       <div class="cards source-list" id="source-results" aria-live="polite"></div>
@@ -97,6 +106,7 @@
     <section class="panel hidden" id="mine-view" aria-label="我的旅行">
       <div class="section-head"><div><span class="section-kicker">MAKE IT YOURS</span><h2>我的小旅行</h2></div><span class="private-label">本机保存</span></div>
       <p class="view-intro">记下自己的安排，留一点空白给临时起意。</p>
+      <div id="travel-tools-host"></div>
       <div class="profile-card">
         <div class="profile-title"><span class="profile-stamp">VN</span><div><h3>七天旅行手账</h3><p>航班 · 住宿 · 想做的事</p></div></div>
         <label class="form-field" for="trip-start"><span>出发日期</span><input type="date" id="trip-start"></label>
@@ -126,9 +136,13 @@
     <div class="sheet-panel"><div class="sheet-grip" aria-hidden="true"></div><button type="button" id="close-sheet" class="close-sheet" aria-label="关闭详情">×</button><div id="sheet-content"></div></div>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="./standalone.js?v=month-6"></script>
-  <script src="./data.js?v=month-6"></script>
-  <script src="./search.js?v=month-6"></script>
-  <script src="./app.js?v=month-6"></script>
+  <script src="./standalone.js?v=journey-7"></script>
+  <script src="./data.js?v=journey-7"></script>
+  <script src="./search.js?v=journey-7"></script>
+  <script src="./maps.js?v=journey-7"></script>
+  <script src="./planner.js?v=journey-7"></script>
+  <script src="./travel-tools.js?v=journey-7"></script>
+  <script src="./journey-ui.js?v=journey-7"></script>
+  <script src="./app.js?v=journey-7"></script>
 </body>
 </html>
