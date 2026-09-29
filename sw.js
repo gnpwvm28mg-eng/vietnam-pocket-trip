@@ -1,6 +1,6 @@
-const CACHE = "vietnam-pocket-v5-search";
+const CACHE = "vietnam-pocket-v6-month";
 const CACHE_PREFIX = "vietnam-pocket-";
-const CORE = ["./", "./index.html", "./style.css?v=search-5", "./app.js?v=search-5", "./data.js?v=search-5", "./search.js?v=search-5", "./standalone.js?v=search-5", "./manifest.json", "./icon-192.png", "./icon.png"];
+const CORE = ["./", "./index.html", "./style.css?v=month-6", "./app.js?v=month-6", "./data.js?v=month-6", "./search.js?v=month-6", "./standalone.js?v=month-6", "./manifest.json", "./icon-192.png", "./icon.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(CORE.map((url) => new Request(url, { cache: "reload" })))).then(() => self.skipWaiting()));

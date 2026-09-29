@@ -27,7 +27,11 @@
     ["中部", "中部", "中区"],
     ["缆车", "缆车", "cable car"],
     ["法棍", "法棍", "banh mi"],
-    ["河粉", "河粉"],
+    ["河粉", "越南粉", "越南河粉", "河粉", "pho"],
+    ["吃喝", "吃喝", "特色美食", "当地美食", "美食", "food"],
+    ["玩乐", "玩乐", "好玩去处", "好玩的地方", "好玩", "景点"],
+    ["衣服", "好看衣服", "买衣服", "衣服", "服装", "购物", "穿搭", "clothing", "fashion", "shopping"],
+    ["攀岩", "攀岩馆", "攀岩", "抱石", "rock climbing", "bouldering", "climbing"],
     ["机场", "机场", "airport"],
     ["雨天", "下雨天", "下雨", "雨天", "雨备", "避雨"],
     ["沙滩", "沙滩", "海滩", "beach"]
@@ -84,7 +88,7 @@
   function unique(values) { return Array.from(new Set(values)); }
   function completeness(p) {
     var raw = p.raw || {};
-    return (p.type === "food" || p.type === "hotel" ? 10000 : 0) +
+    return (p.type === "discovery" ? 20000 : p.type === "food" || p.type === "hotel" ? 10000 : 0) +
       [raw.address, raw.order, raw.query, raw.stay, raw.best, raw.watch].filter(Boolean).length * 100 +
       String(p.note || "").length + (p.sources || []).length * 10;
   }
@@ -125,19 +129,36 @@
     return {
       name: canonical([p.name, extra.join(" ")].join(" ")),
       location: canonical([p.area, raw.city, raw.area, raw.zone, raw.address, raw.query].filter(Boolean).join(" ")),
-      detail: canonical([p.note, raw.note, raw.order, raw.why, raw.best, raw.watch, raw.travel, raw.stay, raw.kind].filter(Boolean).join(" ")),
+      detail: canonical([p.note, raw.note, raw.order, raw.why, raw.best, raw.watch, raw.travel, raw.visit, raw.stay, raw.kind].filter(Boolean).join(" ")),
       rain: raw.rain ? canonical("雨天 " + raw.rain) : "",
-      category: canonical(p.kind)
+      category: canonical([p.kind].concat(raw.topics || []).join(" "))
     };
   }
+  function topicMatches(topic, topics, kind, text, strict) {
+    if (!topic || topic === "all") return true;
+    var wanted = canonical(topic), assigned = (topics || []).map(canonical);
+    if (assigned.indexOf(wanted) !== -1) return true;
+    if (strict) return false;
+    if (["吃喝", "玩乐", "衣服", "攀岩"].indexOf(wanted) !== -1) return canonical(kind) === wanted;
+    // Curated topic labels are authoritative. A warning about an unrelated
+    // activity must not turn a clothing shop into a climbing recommendation.
+    if (assigned.length) return false;
+    return wanted === "河粉" && canonical(kind) === "吃喝" && contains(canonical(text), wanted);
+  }
   function sourceKinds(s, linkedKinds) {
+    var assigned = (s.topics || []).map(canonical);
+    var explicit = assigned.map(function (topic) { return topic === "河粉" ? "吃喝" : topic; }).filter(function (topic) {
+      return ["吃喝", "玩乐", "衣服", "攀岩", "住宿", "交通"].indexOf(topic) !== -1;
+    });
+    if (explicit.length) return unique(explicit);
     var text = canonical([s.title, s.topic, s.summary].join(" "));
     var kinds = [];
     if (/吃|喝|餐|美食|河粉|法棍|coffee|seafood|披萨|火锅|food|pizza/.test(text)) kinds.push("吃喝");
     if (/hotel|住客|入住|别墅|度假村/.test(text)) kinds.push("住宿");
     if (/机场|航班|交通|接驳|包车|打车|grab|巴士|公交|航站楼/.test(text)) kinds.push("交通");
-    if (/玩|游|景点|缆车|safari|vinwonders|乐园|博物馆|公园|教堂|沙滩|city walk|citywalk|sunset town|grand world|购物|步行街/.test(text)) kinds.push("玩乐");
-    return unique(kinds.concat(linkedKinds || []));
+    if (/玩|游|缆车|safari|vinwonders|乐园|博物馆|公园|教堂|沙滩|city walk|citywalk|sunset town|grand world|步行街/.test(text)) kinds.push("玩乐");
+    if (/衣服/.test(text)) kinds.push("衣服");
+    return unique(kinds.concat((linkedKinds || []).filter(function (kind) { return kind !== '攀岩'; })));
   }
   function match(fields, words, full, name) {
     if (!words.length) return { score: 0, fields: [] };
@@ -161,6 +182,8 @@
   function create(placeList, sourceList) {
     var grouped = deduplicate(placeList || []);
     var sourceArray = Array.isArray(sourceList) ? sourceList : Object.keys(sourceList || {}).map(function (key) { return sourceList[key]; });
+    var sourceById = {};
+    sourceArray.forEach(function (s) { sourceById[s.id] = s; });
     var linkedKinds = {};
     (placeList || []).forEach(function (p) {
       (p.sources || []).forEach(function (id) { (linkedKinds[id] || (linkedKinds[id] = [])).push(p.kind); });
@@ -173,9 +196,10 @@
       });
       return { place: group.place, fields: fields, region: group.members.map(placeRegion).filter(Boolean)[0] || null, name: compactName(group.place.name), index: index };
     });
-    var indexedSources = sourceArray.filter(function (s) { return s.inRecentWindow === true; }).map(function (s, index) {
+    var indexedSources = sourceArray.map(function (s, index) {
       return { source: s, cities: cities(s.region), kinds: sourceKinds(s, linkedKinds[s.id]), index: index, fields: {
-        name: canonical(s.title), location: canonical(s.region), detail: canonical([s.author, s.topic, s.summary].join(" "))
+        name: canonical(s.title), location: canonical(s.region), detail: canonical([s.author, s.topic, s.summary].concat(s.topics || []).join(" ")),
+        category: canonical(sourceKinds(s, linkedKinds[s.id]).join(" "))
       } };
     });
     return {
@@ -193,10 +217,24 @@
         var remainingWords = exactVenue ? words : words.filter(function (word) { return word !== "胡志明市" && word !== "富国岛"; });
         var placeWords = remainingWords.filter(function (word) { return requestedRegions.indexOf(word) === -1; });
         var rainyQuery = words.indexOf("雨天") !== -1;
-        var selectedKind = options.kind && options.kind !== "all" ? options.kind : null;
+        var requestedKinds = exactVenue ? [] : ["衣服", "攀岩"].filter(function (kind) { return words.indexOf(kind) !== -1; });
+        var selectedKind = options.kind && options.kind !== "all" ? options.kind : requestedKinds.length === 1 ? requestedKinds[0] : null;
+        var selectedWindow = options.window || "recent";
+        // In the curated month view, typing a theme has the same meaning as
+        // choosing its chip. Incidental mentions in travel tips are not a match.
+        var queryTopics = selectedWindow === 'month' && !exactVenue ? words.filter(function (word) {
+          return ['河粉', '吃喝', '玩乐', '衣服', '攀岩'].indexOf(word) !== -1;
+        }) : [];
+        var selectedTopics = unique((options.topic && options.topic !== 'all' ? [canonical(options.topic)] : []).concat(queryTopics));
+        if (queryTopics.length) {
+          remainingWords = remainingWords.filter(function (word) { return queryTopics.indexOf(word) === -1; });
+          placeWords = placeWords.filter(function (word) { return queryTopics.indexOf(word) === -1; });
+        }
         if (cityConflict) return { places: [], sources: [], terms: words, totalPlaces: 0, totalSources: 0 };
         var places = indexedPlaces.filter(function (entry) {
           return (!selectedCity || entry.place.area === selectedCity) && (!selectedKind || entry.place.kind === selectedKind) &&
+            (selectedWindow !== "month" || entry.place.sources.some(function (id) { return sourceById[id] && sourceById[id].inMonthWindow === true; })) &&
+            groupTopicMatches(entry) &&
             (!requestedRegions.length || (requestedRegions.length === 1 && entry.region === requestedRegions[0]));
         }).map(function (entry) {
           var fields = Object.assign({}, entry.fields);
@@ -208,7 +246,9 @@
           return Object.assign({}, result.entry.place, { matchedBy: result.hit.fields.indexOf("name") !== -1 ? "名称匹配" : result.hit.fields.indexOf("detail") !== -1 ? "点单 / 说明匹配" : "区域 / 分类匹配" });
         });
         var sources = indexedSources.filter(function (entry) {
-          return (!selectedCity || entry.cities.indexOf(selectedCity) !== -1) && (!selectedKind || entry.kinds.indexOf(selectedKind) !== -1);
+          return (selectedWindow === "all" || (selectedWindow === "month" ? entry.source.inMonthWindow === true : entry.source.inRecentWindow === true)) &&
+            (!selectedCity || entry.cities.indexOf(selectedCity) !== -1) && (!selectedKind || entry.kinds.indexOf(selectedKind) !== -1) &&
+            selectedTopics.every(function (topic) { return entry.kinds.some(function (kind) { return topicMatches(topic, entry.source.topics, kind, entry.source.title + " " + entry.source.summary, selectedWindow === 'month'); }); });
         }).map(function (entry) {
           var hit = match(entry.fields, remainingWords, full, canonical(entry.source.title));
           return hit ? { entry: entry, hit: hit } : null;
@@ -216,6 +256,10 @@
           return b.hit.score - a.hit.score || String(b.entry.source.date).localeCompare(String(a.entry.source.date)) || a.entry.index - b.entry.index;
         }).map(function (result) { return result.entry.source; });
         return { places: places, sources: sources, terms: words, totalPlaces: places.length, totalSources: sources.length };
+        function groupTopicMatches(entry) {
+          var p = entry.place, raw = p.raw || {};
+          return selectedTopics.every(function (topic) { return topicMatches(topic, raw.topics, p.kind, p.name + " " + (raw.order || ""), selectedWindow === 'month'); });
+        }
       }
     };
   }
