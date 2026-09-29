@@ -69,9 +69,22 @@ p { font-size:13px; line-height:1.75; }
 .route-map .map-number,.route-map .number { fill:#fffdf5; font-size:10px; font-weight:700; text-anchor:middle; dominant-baseline:central; }
 .route-map .marker { fill:#236b5b; stroke:#fffdf4; stroke-width:2; }
 .map-empty { padding:32px 20px; color:#6c816a; font-size:12px; line-height:1.8; text-align:center; }
+.map-points { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin:8px 4px 3px; padding:8px 0 2px; border-top:1px solid rgba(96,128,83,.14); }
+.map-point-row { display:flex; align-items:center; min-width:0; min-height:34px; padding:6px 8px; border:1px solid rgba(99,135,95,.16); border-radius:9px; color:#496b51; background:rgba(255,255,249,.62); text-align:left; font-size:10px; line-height:1.35; }
+.map-point-row:active { background:#fffef6; }
+.map-point-row:focus-visible { outline:2px solid #88afa2; outline-offset:1px; }
+.map-point-row b { display:flex; align-items:center; justify-content:center; flex:none; width:19px; height:19px; margin-right:6px; border-radius:50%; color:#fffdf4; background:var(--coral); font-size:9px; font-weight:700; }
+.map-point-row span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .route-meta { padding:10px 15px 13px; color:#65785f; font-size:10px; line-height:1.6; border-top:1px solid rgba(96,128,83,.12); }
 .route-meta:empty { display:none; }
 .route-meta strong { color:#416a53; font-weight:600; }
+.now-card { position:relative; margin:0 0 21px; padding:15px 16px 14px; border:1px solid #d8e3d2; border-radius:14px; background:#f0f4e8; }
+.now-card:before { position:absolute; top:15px; left:0; width:3px; height:37px; border-radius:0 4px 4px 0; background:var(--coral); content:""; }
+.now-kicker { margin-bottom:5px; color:var(--coral); font-size:9px; font-weight:700; letter-spacing:1.2px; line-height:1.4; }
+.now-card > strong { display:block; color:var(--ink); font-size:14px; line-height:1.5; font-weight:700; }
+.now-card > p { margin:4px 0 10px; color:#6b7b68; font-size:11px; line-height:1.65; }
+.now-card .btn { min-height:30px; padding:6px 10px; font-size:10px; }
+.now-card .btn:only-child { margin-top:8px; }
 .list-heading { display:flex; justify-content:space-between; align-items:center; margin:20px 0 12px; }
 .list-heading h3 { font-size:15px; letter-spacing:-.3px; }
 .small-label,.progress-label,.result-count { margin-left:10px; color:var(--muted); font-size:10px; line-height:1.5; text-align:right; }
@@ -99,6 +112,11 @@ p { font-size:13px; line-height:1.75; }
 .btn-primary,.btn.primary,.action.primary { color:#fffdf4; border-color:var(--teal); background:var(--teal); }
 .btn-subtle { color:#84907f; border-color:transparent; background:transparent; }
 .card-actions a { text-decoration:none; }
+.card-actions > a { align-items:center; justify-content:center; }
+.card-actions > a:visited { color:inherit; }
+.card-actions > a.btn-primary:visited { color:#fffdf4; }
+.card-actions > a.btn-subtle:visited { color:#84907f; }
+.sheet .card-actions > a { white-space:normal; }
 .favorite,.done { min-height:32px; padding:6px 9px; border:1px solid #e4e5d9; border-radius:8px; color:#89917e; background:transparent; font-size:11px; }
 .favorite.active,.favorite.saved,.favorite.is-saved { color:#b47a4b; border-color:#ead7b4; background:#fbf1d9; }
 .done.active,.done.checked,.done.is-done { color:var(--teal); border-color:#d7e2cc; background:#eaf1e0; }
