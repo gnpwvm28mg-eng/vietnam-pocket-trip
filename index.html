@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="manifest" href="./manifest.json">
   <title>越南口袋游</title>
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./style.css?v=search-5">
 </head>
 <body>
   <main class="app" id="app">
@@ -52,17 +52,33 @@
 
     <section class="panel hidden" id="discover-view" aria-label="吃喝玩乐搜索">
       <div class="section-head"><div><span class="section-kicker">GOOD PLACES, EASY DAYS</span><h2>下一站，去哪儿</h2></div></div>
-      <label class="search-box" for="query"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" stroke-width="1.8"/><path d="m15.5 15.5 5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><input id="query" type="search" placeholder="搜餐厅、景点、酒店、关键词" autocomplete="off"><button id="clear-query" type="button" aria-label="清空搜索">×</button></label>
+      <p class="view-intro search-intro">搜想去的地方，也搜笔记里的真实体验。</p>
+      <form id="discover-search" class="discover-search" role="search" aria-label="发现搜索">
+        <div class="search-box"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" stroke-width="1.8"/><path d="m15.5 15.5 5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><input id="query" type="search" aria-label="搜索地点和笔记" aria-describedby="search-help" placeholder="如：美利亚、北部海鲜" autocomplete="off" enterkeyhint="search"><button id="clear-query" type="button" aria-label="清空搜索" hidden>×</button></div>
+        <button class="btn btn-primary search-submit" type="submit">搜索</button>
+      </form>
+      <p id="search-help" class="search-help">检索已收录地点和近3个月笔记；外部搜索需联网。</p>
+      <div id="search-suggestions" class="search-suggestions" aria-label="试试这些关键词"><span>试试</span><button type="button" data-query="美利亚">美利亚</button><button type="button" data-query="珍珠乐园">珍珠乐园</button><button type="button" data-query="北部海鲜">北部海鲜</button><button type="button" data-query="咖啡">咖啡</button><button type="button" data-query="机场">机场</button></div>
       <div class="discover-controls">
         <div class="filter-row" id="kind-filters" role="tablist" aria-label="内容类型">
           <button class="filter active" type="button" data-kind="all">全部</button><button class="filter" type="button" data-kind="吃喝">吃喝</button><button class="filter" type="button" data-kind="玩乐">玩乐</button><button class="filter" type="button" data-kind="住宿">住宿</button><button class="filter" type="button" data-kind="交通">交通</button>
         </div>
         <label class="area-control" for="area"><span>目的地</span><select id="area"><option value="all">两地都看</option><option value="胡志明市">胡志明市</option><option value="富国岛">富国岛</option></select></label>
       </div>
-      <div class="recommend-wrap"><div class="list-heading"><h3 id="recommend-title">顺路的好去处</h3><span class="small-label">灵感卡片</span></div><div class="cards" id="recommendations"></div></div>
-      <div class="list-heading result-heading"><h3>地点清单</h3><span id="result-count" class="result-count"></span></div>
-      <div class="cards" id="search-results" aria-live="polite"></div>
-      <button type="button" class="btn load-more" id="more-results">再看一些</button>
+      <div class="search-feedback" id="search-feedback"><p id="result-count" role="status" aria-live="polite" aria-atomic="true"></p><button type="button" id="reset-filters" class="btn-subtle" hidden>重置筛选</button></div>
+      <div id="result-types" class="result-types" role="group" aria-label="搜索结果类型" hidden><button type="button" data-search-type="all" aria-pressed="true">全部</button><button type="button" data-search-type="places" aria-pressed="false">地点</button><button type="button" data-search-type="notes" aria-pressed="false">笔记</button></div>
+      <div class="recommend-wrap" id="recommend-wrap"><div class="list-heading"><h3 id="recommend-title">顺路的好去处</h3><span class="small-label">灵感卡片</span></div><div class="cards" id="recommendations"></div></div>
+      <section id="place-results-section" aria-label="地点搜索结果">
+        <div class="list-heading result-heading"><h3 id="places-heading">地点清单</h3><span id="place-count" class="result-count"></span></div>
+        <div class="cards" id="search-results"></div>
+        <button type="button" class="btn load-more" id="more-results" hidden>再看一些地点</button>
+      </section>
+      <section id="note-results-section" aria-label="相关笔记结果" hidden>
+        <div class="list-heading"><h3>相关笔记 · 近3个月</h3><span id="discover-source-count" class="result-count"></span></div>
+        <div class="cards" id="discover-source-results"></div>
+        <button type="button" class="btn load-more" id="more-discover-sources" hidden>再看一些相关笔记</button>
+      </section>
+      <div id="search-external" class="search-external" hidden></div>
     </section>
 
     <section class="panel hidden" id="sources-view" aria-label="小红书帖子参考">
@@ -92,7 +108,7 @@
       <div class="cards" id="saved-list"></div>
       <div class="list-heading essentials-heading"><h3>出发前，随手查</h3><span class="small-label">旅行备忘</span></div>
       <div class="cards" id="essentials-list"></div>
-      <p class="footnote">在手机小红书里打开就能用，无需下载 Codex。</p>
+      <p class="footnote">复制网址到手机浏览器就能用，无需下载 Codex。</p>
     </section>
   </main>
 
@@ -107,8 +123,9 @@
     <div class="sheet-panel"><div class="sheet-grip" aria-hidden="true"></div><button type="button" id="close-sheet" class="close-sheet" aria-label="关闭详情">×</button><div id="sheet-content"></div></div>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="./standalone.js"></script>
-  <script src="./data.js"></script>
-  <script src="./app.js"></script>
+  <script src="./standalone.js?v=search-5"></script>
+  <script src="./data.js?v=search-5"></script>
+  <script src="./search.js?v=search-5"></script>
+  <script src="./app.js?v=search-5"></script>
 </body>
 </html>

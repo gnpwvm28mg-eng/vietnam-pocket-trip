@@ -2,9 +2,9 @@
   "use strict";
   var data = window.TRIP_DATA;
   var standalone = !window.xhs;
-  var state = { day: 0, autoDay: true, variant: 0, view: "plan", kind: "all", query: "", area: "all", weather: "clear", searchLimit: 12, sourceLimit: 12 };
+  var state = { day: 0, autoDay: true, variant: 0, view: "plan", kind: "all", query: "", area: "all", weather: "clear", searchLimit: 12, discoverSourceLimit: 3, searchType: "all", sourceLimit: 12 };
   var trip = { start: "2026-10-01", note: "10/1 08:50 起飞，10:40 抵达新山一机场。\n10/3 14:50 SGN → 15:50 PQC。\n10/6 18:55 PQC → 20:00 SGN。\n10/1–3 Signature Hai Ba Trung；10/3–6 Meliá Vinpearl Phu Quoc。", day7: "", day7Stay: "", day7Flight: "", favorites: {}, done: {}, branches: {}, notes: {} };
-  var sources = {}, places = {}, placeList = [], nativeStore = null;
+  var sources = {}, places = {}, placeList = [], nativeStore = null, discoverySearch = null, composing = false;
   var key = "vietnam-pocket-v1";
   function $ (id) { return document.getElementById(id); }
   function esc (v) { return String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#39;"); }
@@ -24,21 +24,142 @@
   function renderPlan () { var d = day(), v = variant(); $("day-tabs").innerHTML = data.days.map(function (x, i) { return '<button class="day-tab' + (i === state.day ? ' active' : '') + '" data-day="' + i + '"><small>DAY ' + (i + 1) + '</small><strong>' + dateLabel(i) + '</strong><span>' + (i === 6 ? '收尾' : area(x.place)) + '</span></button>'; }).join(""); $("today-day").textContent = state.day === tripDayIndex() ? '今天' : '回到今天'; $("day-title").textContent = d.title; $("day-summary").textContent = state.day === 6 ? ([trip.day7Stay, trip.day7Flight].filter(Boolean).join(' · ') || '10月6日晚住宿、10月7日返程和自由安排，集中在“我的”里补齐。') : d.summary; $("route-toggle").innerHTML = d.variants.map(function (x, i) { return '<button class="chip' + (i === state.variant ? ' active' : '') + '" data-variant="' + i + '">' + esc(x.label) + '</button>'; }).join(""); $("route-meta").textContent = (d.rule ? d.rule + ' · ' : '') + (v.distance || '第七天待补'); var points = v.stops.filter(function (s) { return s.name; }); var pointList = points.length ? '<div class="map-points">' + points.map(function (s, pi) { return '<button type="button" class="map-point-row" data-place="' + esc(s._key) + '"><b>' + (pi + 1) + '</b><span>' + esc(s.name) + '</span></button>'; }).join('') + '</div>' : ''; $("route-map").innerHTML = v.mapSvg ? v.mapSvg + pointList : '<div class="empty"><strong>第七天收尾</strong><p>补充住宿和返程后，这一天就能直接照着走。</p></div>'; if (state.day === 6) { var day7Items = [{ label: '10/6 晚住宿 / 地址', value: trip.day7Stay }, { label: '10/7 返程航班', value: trip.day7Flight }, { label: '10/7 自由安排', value: trip.day7 }]; var filled = day7Items.filter(function (x) { return x.value; }).length; $("now-card").innerHTML = '<div class="now-kicker">返程收尾</div><strong>' + (filled === 3 ? '三项信息已补齐' : '还有 ' + (3 - filled) + ' 项待补') + '</strong><p>把晚住宿、返程航班和最后一天安排填好，出发时就不用临时翻聊天记录。</p><button class="btn btn-primary" data-view="mine">去“我的”填写</button>'; $("plan-progress").textContent = filled + ' / 3 已补齐'; $("day-stops").innerHTML = day7Items.map(function (x, i) { return '<article class="place-card day7-item' + (x.value ? ' completed' : '') + '"><div class="card-top"><span class="stop-number">' + (i + 1) + '</span><div class="card-main"><div class="meta">收尾清单</div><h3>' + esc(x.label) + '</h3></div></div><p class="card-note">' + esc(x.value || '待在“我的”里补充') + '</p></article>'; }).join(''); $("day-note").value = trip.day7 || ''; return; } var next = v.stops.filter(function (s) { return !trip.done[s._key]; })[0]; $("now-card").innerHTML = next ? '<div class="now-kicker">' + (state.day === tripDayIndex() ? '今天这一步' : '这一天的第一步') + '</div><strong>' + esc(next.time + ' · ' + next.name) + '</strong><p>' + esc(next.travel || next.note || '点开详情查看这一站。') + '</p><button class="btn btn-primary" data-place="' + esc(next._key) + '">打开这一步</button>' : '<div class="now-kicker">今天完成</div><strong>这条路线已经走完啦</strong><p>可以去发现页找一顿晚餐，或者给明天留点体力。</p>'; var done = v.stops.filter(function (s) { return trip.done[s._key]; }).length; $("plan-progress").textContent = v.stops.length ? done + ' / ' + v.stops.length + ' 已完成' : '待补录'; $("day-stops").innerHTML = v.stops.map(function (s) { return card(places[s._key], true); }).join(""); $("day-note").value = trip.notes[d.id] || ''; }
   function unique (arr) { var seen = {}; return arr.filter(function (p) { var k = low(p.name).replace(/早餐|午餐|晚餐|外观/g, ''); if (seen[k]) return false; seen[k] = 1; return true; }); }
   function recommend () { var a = state.area === 'all' ? area(day().place) : state.area; var list = unique(placeList.filter(function (p) { return p.area === a && p.kind !== '交通'; })); list.forEach(function (p) { var n = p.day === state.day ? 10 : 0; if (p.kind === '吃喝') n += 3; if (p.sources.length > 1) n += 2; if (trip.done[p.key]) n -= 20; if (state.weather === 'rain') { if (p.raw.indoor || /室内|博物馆|咖啡|河粉|美术馆/.test(p.name + p.note)) n += 15; if (/缆车|码头|沙滩|跳岛|动物园|Safari|步行街/.test(p.name)) n -= 20; } p._score = n; }); list.sort(function (x, y) { return y._score - x._score; }); $("recommend-title").textContent = (state.weather === 'rain' ? '雨天慢游' : '顺路推荐') + ' · ' + a; $("recommendations").innerHTML = list.slice(0, 2).map(function (p) { return card(p, false); }).join(""); }
-  function renderSearch () { var q = low(state.query).trim().split(/\s+/).filter(Boolean); var list = unique(placeList.filter(function (p) { return (state.kind === 'all' || p.kind === state.kind) && (state.area === 'all' || p.area === state.area) && q.every(function (w) { return p.search.indexOf(w) >= 0; }); })); $("result-count").textContent = list.length + ' 个地点与安排'; $("search-results").innerHTML = list.slice(0, state.searchLimit).map(function (p) { return card(p, false); }).join("") || '<div class="empty">没有找到匹配内容<br><small>试试“河粉”“酒店”“Safari”或“缆车”。</small></div>'; $("more-results").hidden = list.length <= state.searchLimit; recommend(); }
+  function mapUrl (p) {
+    if (p.raw.lat && p.raw.lon) return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(p.raw.lat + ',' + p.raw.lon);
+    var query = p.raw.query || [p.name, p.raw.address].filter(Boolean).join(' ');
+    return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(query + ' ' + p.area + ' Vietnam');
+  }
+  function discoveryCard (p) {
+    places[p.key] = p;
+    var html = card(p, false);
+    var routePlace = (p.aliasKeys || [p.key]).map(function (key) { return places[key]; }).filter(function (item) { return item && item.type === 'stop'; })[0];
+    var routeButton = routePlace ? '<button class="btn-subtle" data-route="' + esc(routePlace.key) + '">查看当天安排</button>' : '';
+    return html.replace('<div class="card-actions">', '<div class="card-actions">' + webLink(mapUrl(p), 'Google Maps', 'btn') + routeButton);
+  }
+  function resetSearchFilters () {
+    state.kind = 'all'; state.area = 'all'; $('area').value = 'all';
+  }
+  function searchChanged () {
+    state.query = $('query').value;
+    state.searchLimit = state.query.trim() ? 4 : 12;
+    state.discoverSourceLimit = 3;
+    state.searchType = 'all';
+    renderSearch();
+  }
+  function renderSearch () {
+    if (!discoverySearch) discoverySearch = window.PocketSearch.create(placeList, data.sources);
+    var query = state.query.trim(), filtered = state.kind !== 'all' || state.area !== 'all';
+    var results = discoverySearch.search(query, { area: state.area, kind: state.kind });
+    var list = results.places, notes = query ? results.sources : [];
+    var filterLabel = [state.area !== 'all' ? state.area : '', state.kind !== 'all' ? state.kind : ''].filter(Boolean).join(' · ');
+    $('result-count').textContent = (query ? '“' + query + '” · ' : '') + list.length + ' 个地点' + (query ? ' · ' + notes.length + ' 篇笔记' : '') + (filterLabel ? '（' + filterLabel + '）' : '');
+    $('clear-query').hidden = !state.query;
+    $('reset-filters').hidden = !filtered;
+    $('search-suggestions').hidden = !!query;
+    $('recommend-wrap').hidden = !!query || filtered;
+    if (!query && !filtered) recommend();
+    Array.prototype.forEach.call(document.querySelectorAll('[data-kind]'), function (button) {
+      var selected = button.dataset.kind === state.kind;
+      button.classList.toggle('active', selected);
+      button.setAttribute('aria-pressed', String(selected));
+    });
+    $('result-types').hidden = !query || (!list.length && !notes.length);
+    Array.prototype.forEach.call(document.querySelectorAll('[data-search-type]'), function (button) {
+      var type = button.dataset.searchType;
+      button.setAttribute('aria-pressed', String(type === state.searchType));
+      button.textContent = type === 'all' ? '全部' : type === 'places' ? '地点 ' + list.length : '笔记 ' + notes.length;
+    });
+    $('places-heading').textContent = query ? '匹配的地点' : '地点清单';
+    $('place-count').textContent = list.length + ' 个';
+    $('place-results-section').hidden = state.searchType === 'notes';
+    $('search-results').innerHTML = list.slice(0, state.searchLimit).map(discoveryCard).join('') || '<div class="empty"><strong>' + (query ? '还没有匹配的地点' : '这个筛选下暂无地点') + '</strong><p>' + (filtered ? '可点“重置筛选”扩大范围，关键词会保留。' : '试试店名、中文别名或“北部海鲜”等关键词。') + (notes.length ? '下方有相关笔记可参考。' : '也可以去小红书或 Google Maps 继续找。') + '</p></div>';
+    $('more-results').hidden = list.length <= state.searchLimit;
+    $('more-results').textContent = '再看 ' + Math.min(12, Math.max(0, list.length - state.searchLimit)) + ' 个地点';
+    $('note-results-section').hidden = !query || state.searchType === 'places' || (state.searchType === 'all' && !notes.length);
+    $('discover-source-count').textContent = notes.length + ' 篇';
+    $('discover-source-results').innerHTML = notes.slice(0, state.discoverSourceLimit).map(sourceCard).join('') || '<div class="empty">已收录的近3个月笔记中暂无匹配。可使用上方外部搜索继续找。</div>';
+    $('more-discover-sources').hidden = notes.length <= state.discoverSourceLimit;
+    $('search-external').hidden = !query || !standalone;
+    if (query && standalone) {
+      var hasCity = /胡志明|西贡|富国|saigon|ho chi minh|phu quoc/i.test(window.PocketSearch.normalize(query));
+      var resultCities = list.map(function (p) { return p.area; }).concat(notes.map(function (s) { return s.region; })).filter(Boolean);
+      var oneCity = resultCities.length && resultCities.every(function (city) { return city === resultCities[0]; }) ? resultCities[0] : '';
+      var city = hasCity ? '' : (state.area === 'all' ? oneCity || area(day().place) : state.area);
+      var externalQuery = [city, query].filter(Boolean).join(' ');
+      $('search-external').innerHTML = '<p>继续找' + (city ? ' · ' + esc(city) : '') + ' · 外部实时搜索</p><div class="card-actions">' + webLink('https://www.xiaohongshu.com/search_result?keyword=' + encodeURIComponent(externalQuery), '去小红书搜', 'btn') + webLink('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(externalQuery + ' Vietnam'), '去 Google Maps 搜', 'btn') + '</div>';
+    } else $('search-external').innerHTML = '';
+  }
   function sourceCard (s) { return '<article class="source-card"><div class="meta">' + esc(s.region) + ' · ' + esc(s.date) + '<span class="tag' + (!s.used ? ' muted' : '') + '">' + (s.used ? '近3个月采用' : '备查') + '</span></div><h3><button class="title-button" data-source="' + esc(s.id) + '">' + esc(s.title) + '</button></h3><p class="meta">' + esc(s.author) + ' · ' + esc(s.trust) + '</p><p class="card-note">' + esc(s.summary) + '</p><div class="card-actions">' + webLink(s.url, '打开原帖', 'btn-subtle') + webLink(s.searchUrl, '站内搜索', 'btn-subtle') + '<button class="btn-subtle" data-source="' + esc(s.id) + '">看核验摘记</button></div></article>'; }
   function renderSources () { var q = low($("source-query").value).trim(), r = $("source-region").value, st = $("source-status").value; var list = data.sources.filter(function (s) { return (r === 'all' || s.region === r) && (st === 'all' || (st === 'used' && s.used) || (st === 'recent' && s.inRecentWindow)) && (!q || low([s.title, s.author, s.topic, s.summary].join(' ')).indexOf(q) >= 0); }); $("source-count").textContent = list.length + ' 篇'; $("source-results").innerHTML = list.slice(0, state.sourceLimit).map(sourceCard).join("") || '<div class="empty">没有找到匹配帖子。</div>'; $("more-sources").hidden = list.length <= state.sourceLimit; $("source-method").textContent = data.meta.method || '帖子均为离线摘记，不能代表平台全部内容；工具不提供实时价格、营业或天气。'; }
   function section (h, b) { return b ? '<section class="detail-section"><h3>' + esc(h) + '</h3><p>' + esc(b) + '</p></section>' : ''; }
   function webLink (url, label, cls) { return standalone && url ? '<a class="' + (cls || 'btn') + '" href="' + esc(url) + '">' + esc(label) + ' ↗</a>' : ''; }
   function open (html) { $("sheet-content").innerHTML = html; $("sheet").hidden = false; $("sheet").classList.remove('hidden'); document.body.classList.add('modal-open'); }
   function close () { $("sheet").hidden = true; $("sheet").classList.add('hidden'); document.body.classList.remove('modal-open'); }
-  function showPlace (id) { var p = places[id]; if (!p) return; var s = p.raw; var coords = s.lat && s.lon ? Number(s.lat).toFixed(5) + ', ' + Number(s.lon).toFixed(5) : ''; var query = s.address || s.query || s.name; var mapUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(query); var recentSources = p.sources.map(function (x) { return sources[x]; }).filter(function (x) { return x && x.inRecentWindow; }); open('<div class="detail-eyebrow">' + esc(p.area + ' · ' + p.kind) + '</div><h2>' + esc(p.name) + '</h2><p class="detail-lead">' + esc(p.note) + '</p>' + section('时间 / 移动', [s.time, s.duration, s.travel].filter(Boolean).join(' · ')) + section('点单建议', s.order) + section('地图检索名', query) + section('坐标（备用）', coords) + section('住宿信息', s.stay) + section('雨天替代', s.rain) + section('注意', s.watch) + '<div class="card-actions">' + webLink(mapUrl, '在 Google Maps 打开', 'btn btn-primary') + (p.type === 'stop' ? '<button class="btn" data-route="' + esc(id) + '">回到当天路线</button>' : '') + '</div>' + (standalone ? '' : '<p class="notice">网页版本可直接打开 Google Maps；小红书小工具版受沙箱限制，只显示离线地图与检索名。</p>') + '<section class="detail-section"><h3>近3个月相关帖子</h3>' + recentSources.map(sourceCard).join('') + (!recentSources.length ? '<p>这条是路线组织建议，近3个月暂无直接挂靠帖子；旧帖仍可在“笔记 · 全部笔记”中备查。</p>' : '') + '</section>'); }
+  function showPlace (id) {
+    var p = places[id]; if (!p) return;
+    var s = p.raw;
+    var coords = s.lat && s.lon ? Number(s.lat).toFixed(5) + ', ' + Number(s.lon).toFixed(5) : '';
+    var query = s.query || [s.name, s.address].filter(Boolean).join(' ');
+    var recentSources = p.sources.map(function (x) { return sources[x]; }).filter(function (x) { return x && x.inRecentWindow; });
+    open('<div class="detail-eyebrow">' + esc(p.area + ' · ' + p.kind) + '</div><h2>' + esc(p.name) + '</h2><p class="detail-lead">' + esc(p.note) + '</p>' + section('时间 / 移动', [s.time, s.duration, s.travel].filter(Boolean).join(' · ')) + section('点单建议', s.order) + section('地图检索名', query) + section('坐标（备用）', coords) + section('住宿信息', s.stay) + section('雨天替代', s.rain) + section('注意', s.watch) + '<div class="card-actions">' + webLink(mapUrl(p), '在 Google Maps 打开', 'btn btn-primary') + (p.type === 'stop' ? '<button class="btn" data-route="' + esc(id) + '">回到当天路线</button>' : '') + '</div>' + (standalone ? '' : '<p class="notice">网页版本可直接打开 Google Maps；小红书小工具版受沙箱限制，只显示离线地图与检索名。</p>') + '<section class="detail-section"><h3>近3个月相关帖子</h3>' + recentSources.map(sourceCard).join('') + (!recentSources.length ? '<p>这条是路线组织建议，近3个月暂无直接挂靠帖子；旧帖仍可在“笔记 · 全部笔记”中备查。</p>' : '') + '</section>');
+  }
   function showSource (id) { var s = sources[id]; if (!s) return; open('<div class="detail-eyebrow">小红书原帖线索 · ' + (s.used ? '近3个月已采用' : '备查记录') + '</div><h2>' + esc(s.title) + '</h2><p class="meta">' + esc(s.author) + ' · ' + esc(s.date) + '</p>' + section('核验摘记', s.summary) + section('参考类型', s.trust) + '<div class="source-keywords"><small>小红书站内搜索词</small><strong>' + esc(s.author + ' ' + s.title) + '</strong></div><div class="card-actions">' + webLink(s.url, '打开原帖', 'btn btn-primary') + webLink(s.searchUrl, '站内搜索', 'btn') + '<button class="btn" data-source-filter="' + esc(s.author) + '">筛选此作者</button></div>' + (standalone ? '<p class="notice">原帖链接已改为 /explore/ 详情地址；若帖子被删、权限变化或 token 过期，点“站内搜索”仍可按作者和标题找回。</p>' : '<p class="notice">小红书小工具版受沙箱限制，不显示外链；独立网页可打开原帖或站内搜索。</p>') + '</div>'); }
   function renderMine () { $("trip-start").value = trip.start; $("trip-note").value = trip.note; $("day7-note").value = trip.day7 || ''; $("day7-stay").value = trip.day7Stay || ''; $("day7-flight").value = trip.day7Flight || ''; var favs = placeList.filter(function (p) { return trip.favorites[p.key]; }); $("saved-list").innerHTML = favs.map(function (p) { return card(p, false); }).join('') || '<div class="empty">把心动的餐厅和景点收藏在这里。</div>'; $("essentials-list").innerHTML = (data.essentials || []).map(function (s) { return '<div class="essential-row"><strong>' + esc(s.label || '') + '</strong><p>' + esc(typeof s.value === 'string' ? s.value : (s.note || '')) + '</p></div>'; }).join('') + (data.alerts || []).map(function (s) { return '<p class="notice">' + esc(typeof s === 'string' ? s : s.value || s.note || '') + '</p>'; }).join(''); }
-  function switchView (v) { state.view = v; ['plan', 'discover', 'sources', 'mine'].forEach(function (x) { $(x + '-view').classList.toggle('hidden', x !== v); }); Array.prototype.forEach.call(document.querySelectorAll('[data-view]'), function (b) { b.classList.toggle('active', b.getAttribute('data-view') === v); }); if (v === 'plan') renderPlan(); if (v === 'discover') renderSearch(); if (v === 'sources') renderSources(); if (v === 'mine') renderMine(); window.scrollTo(0, 0); }
+  function switchView (v) { state.view = v; document.body.classList.toggle('is-discover', v === 'discover'); ['plan', 'discover', 'sources', 'mine'].forEach(function (x) { $(x + '-view').classList.toggle('hidden', x !== v); }); Array.prototype.forEach.call(document.querySelectorAll('[data-view]'), function (b) { b.classList.toggle('active', b.getAttribute('data-view') === v); }); if (v === 'plan') renderPlan(); if (v === 'discover') renderSearch(); if (v === 'sources') renderSources(); if (v === 'mine') renderMine(); window.scrollTo(0, 0); }
   function bindInstall () { var button = $("install-app"); if (!button || !standalone) return; button.addEventListener("click", function () { if (window.PocketTripPWA && window.PocketTripPWA.install) { window.PocketTripPWA.install().then(function (result) { if (result && result.outcome === "accepted") toast("已添加到手机主屏幕"); }); } else { toast("请在浏览器菜单中选择“添加到主屏幕”"); } }); }
   async function save (message) { try { var raw = JSON.stringify(trip); if (nativeStore) await nativeStore.setStorage({ key: key, data: raw }); else window.localStorage.setItem(key, raw); $("save-status").textContent = '已保存到此设备'; if (message) toast(message); } catch (e) { toast('暂时无法保存，本次修改仍可使用'); } }
   async function storage () { var api = window.xhs && window.xhs.miniTool, launch = window.xhs && window.xhs.launchOptions, build = Number(launch && launch.miniToolEnv && launch.miniToolEnv.buildVersion) || 0; if (!build && api && api.getLaunchOptions) { try { launch = await api.getLaunchOptions(); build = Number(launch && launch.miniToolEnv && launch.miniToolEnv.buildVersion) || 0; } catch (e) {} } if (Math.floor(build / 1000) >= 9460 && api && api.getStorage && api.setStorage) nativeStore = api; try { var raw = nativeStore ? (await nativeStore.getStorage({ key: key })).data : window.localStorage.getItem(key); var saved = raw ? JSON.parse(raw) : null; if (saved) { Object.keys(trip).forEach(function (k) { if (saved[k] !== undefined) trip[k] = saved[k]; }); } if (state.autoDay) { state.day = tripDayIndex(); state.variant = trip.branches[day().id] || 0; } $("save-status").textContent = nativeStore ? '保存在小工具缓存中' : '兼容存储模式'; } catch (e) { $("save-status").textContent = '无法读取旧记录，本次仍可使用'; } renderPlan(); renderMine(); }
-  function click (e) { var b = e.target.closest('button'); if (b) { if (b.dataset.view) switchView(b.dataset.view); else if (b.dataset.day !== undefined) { state.day = Number(b.dataset.day); state.variant = trip.branches[day().id] || 0; state.autoDay = false; renderPlan(); } else if (b.dataset.variant !== undefined) { state.variant = Number(b.dataset.variant); trip.branches[day().id] = state.variant; renderPlan(); save(); } else if (b.dataset.place) showPlace(b.dataset.place); else if (b.dataset.source) showSource(b.dataset.source); else if (b.dataset.sourceFilter) { close(); switchView('sources'); $('source-query').value = b.dataset.sourceFilter; renderSources(); } else if (b.dataset.favorite) { trip.favorites[b.dataset.favorite] = !trip.favorites[b.dataset.favorite]; renderMine(); renderSearch(); save(trip.favorites[b.dataset.favorite] ? '已加入收藏' : '已取消收藏'); } else if (b.dataset.done) { trip.done[b.dataset.done] = !trip.done[b.dataset.done]; renderPlan(); save(); } else if (b.dataset.route) { var p = places[b.dataset.route]; state.day = p.day; state.variant = p.variant; state.autoDay = false; close(); switchView('plan'); } else if (b.dataset.kind) { state.kind = b.dataset.kind; Array.prototype.forEach.call(document.querySelectorAll('[data-kind]'), function (x) { x.classList.toggle('active', x === b); }); renderSearch(); } } var mp = e.target.closest('[data-map-index]'); if (mp) { var s = variant().stops[Number(mp.getAttribute('data-map-index'))]; if (s) showPlace(s._key); } }
-  function init () { index(); state.day = tripDayIndex(); var recentCount = data.sources.filter(function (s) { return s.inRecentWindow; }).length; $("source-total").textContent = recentCount + ' 篇近3个月笔记'; document.addEventListener('click', click); $("close-sheet").addEventListener('click', close); $("sheet").addEventListener('click', function (e) { if (e.target === $("sheet")) close(); }); $("query").addEventListener('input', function () { state.query = this.value; state.searchLimit = 12; renderSearch(); }); $("clear-query").addEventListener('click', function () { $("query").value = ''; state.query = ''; renderSearch(); }); $("area").addEventListener('change', function () { state.area = this.value; renderSearch(); }); $("weather").addEventListener('change', function () { state.weather = this.value; renderPlan(); if (state.view === 'discover') renderSearch(); }); ["source-query", "source-region", "source-status"].forEach(function (id) { $(id).addEventListener(id === 'source-query' ? 'input' : 'change', renderSources); }); $("more-results").addEventListener('click', function () { state.searchLimit += 12; renderSearch(); }); $("more-sources").addEventListener('click', function () { state.sourceLimit += 12; renderSources(); }); $("today-day").addEventListener('click', function () { state.day = tripDayIndex(); state.variant = trip.branches[day().id] || 0; state.autoDay = true; renderPlan(); toast(state.day === 0 && vietnamDate() < trip.start ? '行程尚未开始，已回到第一天' : '已回到越南当地今天'); }); $("day-note").addEventListener('change', function () { if (state.day === 6) trip.day7 = this.value; else trip.notes[day().id] = this.value; save('当天备注已保存'); }); $("save-trip").addEventListener('click', function () { trip.start = $("trip-start").value; trip.note = $("trip-note").value; trip.day7 = $("day7-note").value; trip.day7Stay = $("day7-stay").value.trim(); trip.day7Flight = $("day7-flight").value.trim(); if (state.autoDay) state.day = tripDayIndex(); renderPlan(); save('我的安排已保存'); }); bindInstall(); renderPlan(); renderMine(); storage(); }
+  function click (e) {
+    var b = e.target.closest('button');
+    if (b) {
+      if (b.dataset.view) switchView(b.dataset.view);
+      else if (b.dataset.day !== undefined) { state.day = Number(b.dataset.day); state.variant = trip.branches[day().id] || 0; state.autoDay = false; renderPlan(); }
+      else if (b.dataset.variant !== undefined) { state.variant = Number(b.dataset.variant); trip.branches[day().id] = state.variant; renderPlan(); save(); }
+      else if (b.dataset.place) showPlace(b.dataset.place);
+      else if (b.dataset.source) showSource(b.dataset.source);
+      else if (b.dataset.sourceFilter) { close(); switchView('sources'); $('source-query').value = b.dataset.sourceFilter; renderSources(); }
+      else if (b.dataset.favorite) { trip.favorites[b.dataset.favorite] = !trip.favorites[b.dataset.favorite]; renderMine(); renderSearch(); save(trip.favorites[b.dataset.favorite] ? '已加入收藏' : '已取消收藏'); }
+      else if (b.dataset.done) { trip.done[b.dataset.done] = !trip.done[b.dataset.done]; renderPlan(); save(); }
+      else if (b.dataset.route) { var p = places[b.dataset.route]; state.day = p.day; state.variant = p.variant; state.autoDay = false; close(); switchView('plan'); }
+      else if (b.dataset.kind) { state.kind = b.dataset.kind; searchChanged(); }
+      else if (b.dataset.query) { resetSearchFilters(); $('query').value = b.dataset.query; searchChanged(); }
+      else if (b.dataset.searchType) { state.searchType = b.dataset.searchType; renderSearch(); }
+    }
+    var mp = e.target.closest('[data-map-index]');
+    if (mp) { var s = variant().stops[Number(mp.getAttribute('data-map-index'))]; if (s) showPlace(s._key); }
+  }
+  function init () {
+    index(); state.day = tripDayIndex();
+    var recentCount = data.sources.filter(function (s) { return s.inRecentWindow; }).length;
+    $('source-total').textContent = recentCount + ' 篇近3个月笔记';
+    document.addEventListener('click', click);
+    $('close-sheet').addEventListener('click', close);
+    $('sheet').addEventListener('click', function (e) { if (e.target === $('sheet')) close(); });
+    $('query').addEventListener('compositionstart', function () { composing = true; });
+    $('query').addEventListener('compositionend', function () { composing = false; searchChanged(); });
+    $('query').addEventListener('input', function () { if (!composing) searchChanged(); });
+    $('query').addEventListener('search', searchChanged);
+    $('discover-search').addEventListener('submit', function (event) {
+      event.preventDefault(); if (composing) return;
+      searchChanged(); $('query').blur();
+      $('search-feedback').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+    $('clear-query').addEventListener('click', function () { $('query').value = ''; searchChanged(); $('query').focus(); });
+    $('reset-filters').addEventListener('click', function () { resetSearchFilters(); searchChanged(); });
+    $('area').addEventListener('change', function () { state.area = this.value; searchChanged(); });
+    $('weather').addEventListener('change', function () { state.weather = this.value; renderPlan(); if (state.view === 'discover') renderSearch(); });
+    ['source-query', 'source-region', 'source-status'].forEach(function (id) { $(id).addEventListener(id === 'source-query' ? 'input' : 'change', renderSources); });
+    $('more-results').addEventListener('click', function () { state.searchLimit += 12; renderSearch(); });
+    $('more-discover-sources').addEventListener('click', function () { state.discoverSourceLimit += 6; renderSearch(); });
+    $('more-sources').addEventListener('click', function () { state.sourceLimit += 12; renderSources(); });
+    $('today-day').addEventListener('click', function () { state.day = tripDayIndex(); state.variant = trip.branches[day().id] || 0; state.autoDay = true; renderPlan(); toast(state.day === 0 && vietnamDate() < trip.start ? '行程尚未开始，已回到第一天' : '已回到越南当地今天'); });
+    $('day-note').addEventListener('change', function () { if (state.day === 6) trip.day7 = this.value; else trip.notes[day().id] = this.value; save('当天备注已保存'); });
+    $('save-trip').addEventListener('click', function () {
+      trip.start = $('trip-start').value; trip.note = $('trip-note').value; trip.day7 = $('day7-note').value;
+      trip.day7Stay = $('day7-stay').value.trim(); trip.day7Flight = $('day7-flight').value.trim();
+      if (state.autoDay) state.day = tripDayIndex(); renderPlan(); save('我的安排已保存');
+    });
+    bindInstall(); renderPlan(); renderMine(); storage();
+  }
   init();
 }());
