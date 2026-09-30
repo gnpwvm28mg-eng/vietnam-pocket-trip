@@ -11,7 +11,7 @@
   function low (v) { return String(v || "").toLowerCase().replace(/đ/g, "d"); }
   function toast (s) { $("toast").textContent = s; $("toast").classList.add("show"); clearTimeout(toast.timer); toast.timer = setTimeout(function () { $("toast").classList.remove("show"); }, 2300); }
   function area (v) { return /富国|phu quoc|pqc|北部|南部|中部/i.test(v || "") ? "富国岛" : "胡志明市"; }
-  function kind (s) { if (/攀岩|抱石/.test(s.kind || "")) return "攀岩"; if (/衣服|购物/.test(s.kind || "")) return "衣服"; if (/吃喝|餐|咖啡/.test(s.kind || "")) return "吃喝"; if (/住宿|休整/.test(s.kind || "")) return "住宿"; if (/航班|交通|准备/.test(s.kind || "")) return "交通"; return "玩乐"; }
+  function kind (s) { if (/洗头|按摩|spa|养生/.test((s.kind || '') + ' ' + (s.name || ''))) return "洗头按摩"; if (/攀岩|抱石/.test(s.kind || "")) return "攀岩"; if (/衣服|购物/.test(s.kind || "")) return "衣服"; if (/吃喝|餐|咖啡/.test(s.kind || "")) return "吃喝"; if (/住宿|休整/.test(s.kind || "")) return "住宿"; if (/航班|交通|准备/.test(s.kind || "")) return "交通"; return "玩乐"; }
   function day () { return data.days[state.day] || data.days[0]; }
   function variant () { return day().variants[state.variant] || day().variants[0] || { stops: [] }; }
   function place (s, di, vi, si, dayArea) { var id = s.id || "d" + di + "v" + vi + "s" + si; s._key = id; if (!places[id]) { places[id] = { key: id, name: s.name, kind: kind(s), area: s.city || dayArea, note: [s.note, s.order, s.best, s.watch].filter(Boolean).join("；"), sources: s.sources || [], raw: s, day: di, variant: vi, index: si, type: "stop" }; placeList.push(places[id]); } return places[id]; }
@@ -66,10 +66,12 @@
     places[p.key] = p;
     var html = card(p, false);
     var monthNotes = monthSources(p).sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
-    var extra = (monthNotes.length ? '<p class="discovery-evidence"><span class="tag">近1个月</span>' + esc(sourceDate(monthNotes[0])) + ' · ' + monthNotes.length + ' 篇直接参考</p>' : '') + (p.raw.visit ? '<p class="visit-note"><span>怎么安排</span>' + esc(p.raw.visit) + '</p>' : '');
+    var verification = p.raw.venueVerification || {}, isSpa = p.kind === '洗头按摩';
+    var extra = (isSpa ? '<p class="discovery-evidence"><span class="tag">帖子体验</span>' + (verification.status === 'verified' ? '<span class="tag">门店地址已核验</span>' : '<span class="tag muted">地址待复核</span>') + (verification.price ? '<span class="tag muted">帖子当次套餐</span>' : '') + '</p>' : '') + (monthNotes.length ? '<p class="discovery-evidence"><span class="tag">近1个月</span>' + esc(sourceDate(monthNotes[0])) + ' · ' + monthNotes.length + ' 篇直接参考</p>' : '') + (p.raw.visit ? '<p class="visit-note"><span>怎么安排</span>' + esc(p.raw.visit) + '</p>' : '');
     var routePlace = (p.aliasKeys || [p.key]).map(function (key) { return places[key]; }).filter(function (item) { return item && item.type === 'stop'; })[0];
     var routeButton = routePlace ? '<button class="btn-subtle" data-route="' + esc(routePlace.key) + '">查看当天安排</button>' : '';
-    return html.replace('<div class="card-actions">', extra + '<div class="card-actions">' + webLink(mapUrl(p), 'Google Maps', 'btn') + routeButton);
+    var mapButton = p.raw.query || p.raw.mapsUrl || (p.raw.lat && p.raw.lon) ? webLink(mapUrl(p), 'Google Maps', 'btn') : '';
+    return html.replace('<div class="card-actions">', extra + '<div class="card-actions">' + mapButton + routeButton);
   }
   function resetSearchFilters () {
     state.kind = 'all'; state.topic = 'all'; state.area = 'all'; $('area').value = 'all';
@@ -157,9 +159,10 @@
     var s = p.raw;
     var coords = s.lat && s.lon ? Number(s.lat).toFixed(5) + ', ' + Number(s.lon).toFixed(5) : '';
     var query = s.query || [s.name, s.address].filter(Boolean).join(' ');
-    var orderLabel = p.kind === '衣服' ? '选购建议' : p.kind === '攀岩' ? '体验建议' : '点单建议';
+    var orderLabel = p.kind === '衣服' ? '选购建议' : p.kind === '攀岩' ? '体验建议' : p.kind === '洗头按摩' ? '体验与避雷' : '点单建议';
     var recentSources = p.sources.map(function (x) { return sources[x]; }).filter(Boolean).sort(function (a, b) { return Number(!!b.inMonthWindow) - Number(!!a.inMonthWindow) || String(b.date).localeCompare(String(a.date)); });
-    open('<div class="detail-eyebrow">' + esc(p.area + ' · ' + p.kind) + '</div><h2>' + esc(p.name) + '</h2><p class="detail-lead">' + esc(p.note) + '</p>' + section('怎么安排 / 从酒店出发', s.visit) + section('时间 / 移动', [s.time, s.duration, s.travel].filter(Boolean).join(' · ')) + section(orderLabel, s.order) + section('地址 / 定位线索', s.address) + section('地图检索名', query) + section('坐标（备用）', coords) + section('住宿信息', s.stay) + section('雨天替代', s.rain) + section('注意', s.watch) + '<div class="card-actions">' + webLink(mapUrl(p), '在 Google Maps 打开', 'btn btn-primary') + (p.type === 'stop' ? '<button class="btn" data-route="' + esc(id) + '">回到当天路线</button>' : '') + '</div>' + (standalone ? '' : '<p class="notice">网页版本可直接打开 Google Maps；小红书小工具版受沙箱限制，只显示离线地图与检索名。</p>') + '<section class="detail-section"><h3>相关原帖 · 日期逐篇标注</h3>' + recentSources.map(sourceCard).join('') + (!recentSources.length ? '<p>这条是路线组织建议，暂无直接挂靠帖子。</p>' : '') + '</section>');
+    var verification = s.venueVerification, verifyHTML = verification ? '<section class="detail-section"><h3>信息状态</h3><p>'+esc(verification.status==='partial'?'近期体验线索；地址与具体分店仍需复核':verification.status==='pending'?'小红书体验线索；店址与营业状态待核验':verification.status==='verified'?'商户地址已核对；帖子体验、营业和价格仍以当日为准':'信息待复核')+'</p></section>' : '';
+    open('<div class="detail-eyebrow">' + esc(p.area + ' · ' + p.kind) + '</div><h2>' + esc(p.name) + '</h2><p class="detail-lead">' + esc(p.note) + '</p>' + section('怎么安排 / 从酒店出发', s.visit) + section('时间 / 移动', [s.time, s.duration, s.travel].filter(Boolean).join(' · ')) + section(orderLabel, s.order) + section('地址 / 定位线索', s.address) + section('地图检索名', query) + section('坐标（备用）', coords) + section('住宿信息', s.stay) + section('雨天替代', s.rain) + section('注意', s.watch) + verifyHTML + '<div class="card-actions">' + (query ? webLink(mapUrl(p), '在 Google Maps 搜索', 'btn btn-primary') : '') + (p.type === 'stop' ? '<button class="btn" data-route="' + esc(id) + '">回到当天路线</button>' : '') + '</div>' + (standalone ? '' : '<p class="notice">网页版本可直接打开外链；小红书小工具版受沙箱限制，只显示离线地图与检索名。</p>') + '<section class="detail-section"><h3>相关原帖 · 日期逐篇标注</h3>' + recentSources.map(sourceCard).join('') + (!recentSources.length ? '<p>这条是路线组织建议，暂无直接挂靠帖子。</p>' : '') + '</section>');
     if (journeyUI) journeyUI.enrichDetail(p);
   }
   function showSource (id) { var s = sources[id]; if (!s) return; open('<div class="detail-eyebrow">小红书原帖线索 · ' + (s.inMonthWindow ? '近1个月' : s.inRecentWindow ? '近3个月' : '历史备查') + '</div><h2>' + esc(s.title) + '</h2><p class="meta">' + esc(s.author) + ' · ' + esc(sourceDate(s)) + '</p>' + section('核验摘记', s.summary) + section('日期依据', s.dateEvidence) + section('参考类型', s.trust) + '<div class="source-keywords"><small>小红书站内搜索词</small><strong>' + esc(s.author + ' ' + s.title) + '</strong></div><div class="card-actions">' + webLink(s.url, '打开原帖', 'btn btn-primary') + webLink(s.searchUrl, '站内搜索', 'btn') + '<button class="btn" data-source-filter="' + esc(s.author) + '">筛选此作者</button></div>' + (standalone ? '<p class="notice">原帖链接已改为 /explore/ 详情地址；若帖子被删、权限变化或 token 过期，点“站内搜索”仍可按作者和标题找回。</p>' : '<p class="notice">小红书小工具版受沙箱限制，不显示外链；独立网页可打开原帖或站内搜索。</p>')); }
