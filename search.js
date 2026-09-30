@@ -32,6 +32,7 @@
     ["玩乐", "玩乐", "好玩去处", "好玩的地方", "好玩", "景点"],
     ["衣服", "好看衣服", "买衣服", "衣服", "服装", "购物", "穿搭", "clothing", "fashion", "shopping"],
     ["攀岩", "攀岩馆", "攀岩", "抱石", "rock climbing", "bouldering", "climbing"],
+    ["洗头按摩", "洗头", "洗头按摩spa", "头疗", "按摩", "养生洗头", "越式洗头", "spa", "gội đầu", "massage"],
     ["机场", "机场", "airport"],
     ["雨天", "下雨天", "下雨", "雨天", "雨备", "避雨"],
     ["沙滩", "沙滩", "海滩", "beach"]
@@ -140,6 +141,7 @@
     if (assigned.indexOf(wanted) !== -1) return true;
     if (strict) return false;
     if (["吃喝", "玩乐", "衣服", "攀岩"].indexOf(wanted) !== -1) return canonical(kind) === wanted;
+    if (["洗头按摩", "spa"].indexOf(wanted) !== -1) return assigned.indexOf(wanted) !== -1;
     // Curated topic labels are authoritative. A warning about an unrelated
     // activity must not turn a clothing shop into a climbing recommendation.
     if (assigned.length) return false;
@@ -148,7 +150,7 @@
   function sourceKinds(s, linkedKinds) {
     var assigned = (s.topics || []).map(canonical);
     var explicit = assigned.map(function (topic) { return topic === "河粉" ? "吃喝" : topic; }).filter(function (topic) {
-      return ["吃喝", "玩乐", "衣服", "攀岩", "住宿", "交通"].indexOf(topic) !== -1;
+      return ["吃喝", "玩乐", "衣服", "攀岩", "洗头按摩", "spa", "住宿", "交通"].indexOf(topic) !== -1;
     });
     if (explicit.length) return unique(explicit);
     var text = canonical([s.title, s.topic, s.summary].join(" "));
@@ -231,7 +233,7 @@
         // In the curated month view, typing a theme has the same meaning as
         // choosing its chip. Incidental mentions in travel tips are not a match.
         var queryTopics = selectedWindow === 'month' && !exactVenue ? words.filter(function (word) {
-          return ['河粉', '吃喝', '玩乐', '衣服', '攀岩'].indexOf(word) !== -1;
+          return ['河粉', '吃喝', '玩乐', '衣服', '攀岩', '洗头按摩', 'spa'].indexOf(word) !== -1;
         }) : [];
         var selectedTopics = unique((options.topic && options.topic !== 'all' ? [canonical(options.topic)] : []).concat(queryTopics));
         if (queryTopics.length) {
