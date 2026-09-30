@@ -120,8 +120,9 @@
     if (own(source, "prefs")) {
       if (!record(source.prefs)) fail("偏好格式无效");
       // Only UI preferences, never imported HTML, URLs, geolocation or code.
-      ["publishedOnly", "compactFilters", "rain", "nearHotel"].forEach(function (key) { if (own(source.prefs, key)) { if (typeof source.prefs[key] !== "boolean") fail("偏好应为是 / 否"); result.prefs[key] = source.prefs[key]; } });
+      ["publishedOnly", "compactFilters", "rain", "nearHotel", "preflightVisa", "preflightTerminal", "preflightTransfer", "preflightWeather"].forEach(function (key) { if (own(source.prefs, key)) { if (typeof source.prefs[key] !== "boolean") fail("偏好应为是 / 否"); result.prefs[key] = source.prefs[key]; } });
       ["nowOrigin", "nowKind", "nowDuration", "nowCity", "nowBudget", "nowTime", "nowMode"].forEach(function (key) { if (own(source.prefs, key)) result.prefs[key] = cleanString(source.prefs[key], 100, "偏好"); });
+      ["preflightVisa", "preflightTerminal", "preflightTransfer", "preflightWeather"].forEach(function (key) { if (own(source.prefs, key)) { if (typeof source.prefs[key] !== "boolean") fail("出发前核对状态应为是 / 否"); result.prefs[key] = source.prefs[key]; } });
     }
     return { trip: result, counts: countTrip(result), exportedAt: typeof input.exportedAt === "string" ? input.exportedAt.slice(0, 40) : "" };
   }

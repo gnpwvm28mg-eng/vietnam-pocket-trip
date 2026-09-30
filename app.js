@@ -39,6 +39,20 @@
     renderBasePlan();
     if (journeyUI) journeyUI.renderPlan();
     else if (window.PocketMaps) window.PocketMaps.render($('route-map'), {items:variant().stops, offlineSvg:variant().mapSvg, city:area(day().place)});
+    renderDepartureChecklist();
+  }
+  function renderDepartureChecklist () {
+    var host=$('departure-checklist'); if(!host)return;
+    var today=vietnamDate(),start=trip.start||'2026-10-01',days=Math.ceil((Date.parse(start+'T00:00:00Z')-Date.parse(today+'T00:00:00Z'))/86400000);
+    if(days>7||days<0){host.innerHTML='';return;}
+    var prefs=trip.prefs||{},items=[
+      {id:'visa',title:'签证与入境资格',detail:'确认签证 / 电子签覆盖 SGN 入境口岸，并与护照信息一致。',done:!!prefs.preflightVisa},
+      {id:'terminal',title:'航班与航站楼',detail:'核对航空公司通知、航班状态及当日航站楼。',done:!!prefs.preflightTerminal},
+      {id:'transfer',title:'酒店接送与权益',detail:'确认 Meliá 接送是否含在订单内、集合点与酒店权益。',done:!!prefs.preflightTransfer},
+      {id:'weather',title:'天气与海上项目',detail:'查看阵雨 / 风浪；决定 10/4 与 10/5 是否调换。',done:!!prefs.preflightWeather}
+    ];
+    var done=items.filter(function(item){return item.done;}).length;
+    host.innerHTML='<details class="departure-checklist"'+(done<items.length?' open':'')+'><summary><span>出发前核对</span><small>'+(days===0?'今天出发':days>0?'还有 '+days+' 天':'行程中')+' · '+done+'/'+items.length+' 完成</small></summary><div class="departure-check-items">'+items.map(function(item){return '<label><input type="checkbox" data-preflight="'+item.id+'" '+(item.done?'checked':'')+'><span><strong>'+item.title+'</strong><small>'+item.detail+'</small></span></label>';}).join('')+'</div></details>';
   }
   function unique (arr) { var seen = {}; return arr.filter(function (p) { var k = low(p.name).replace(/早餐|午餐|晚餐|外观/g, ''); if (seen[k]) return false; seen[k] = 1; return true; }); }
   function recommend () { var a = state.area === 'all' ? area(day().place) : state.area; var list = unique(placeList.filter(function (p) { return p.area === a && p.kind !== '交通'; })); list.forEach(function (p) { var n = p.day === state.day ? 10 : 0; if (p.kind === '吃喝') n += 3; if (p.sources.length > 1) n += 2; if (trip.done[p.key]) n -= 20; if (state.weather === 'rain') { if (p.raw.indoor || /室内|博物馆|咖啡|河粉|美术馆/.test(p.name + p.note)) n += 15; if (/缆车|码头|沙滩|跳岛|动物园|Safari|步行街/.test(p.name)) n -= 20; } p._score = n; }); list.sort(function (x, y) { return y._score - x._score; }); $("recommend-title").textContent = (state.weather === 'rain' ? '雨天慢游' : '顺路推荐') + ' · ' + a; $("recommendations").innerHTML = list.slice(0, 2).map(function (p) { return card(p, false); }).join(""); }
@@ -210,6 +224,7 @@
     $('area').addEventListener('change', function () { state.area = this.value; searchChanged(); });
     $('weather').addEventListener('change', function () { state.weather = this.value; trip.prefs=trip.prefs||{};trip.prefs.rain=state.weather==='rain';renderPlan(); if (state.view === 'discover') renderSearch(); save(); });
     $('published-only').addEventListener('change', function () {trip.prefs=trip.prefs||{};trip.prefs.publishedOnly=this.checked;searchChanged();save();});
+    $('departure-checklist').addEventListener('change',function(event){var input=event.target.closest('[data-preflight]');if(!input)return;trip.prefs=trip.prefs||{};trip.prefs['preflight'+input.dataset.preflight.charAt(0).toUpperCase()+input.dataset.preflight.slice(1)]=input.checked;renderDepartureChecklist();save('出发前核对已保存');});
     ['source-query', 'source-region', 'source-status', 'source-topic'].forEach(function (id) { $(id).addEventListener(id === 'source-query' ? 'input' : 'change', function () { state.sourceLimit = 12; renderSources(); }); });
     $('more-results').addEventListener('click', function () { state.searchLimit += 12; renderSearch(); });
     $('more-discover-sources').addEventListener('click', function () { state.discoverSourceLimit += 6; renderSearch(); });

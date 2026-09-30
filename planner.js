@@ -189,6 +189,13 @@
     var h = Math.sin(dlat / 2) ** 2 + Math.cos(first.lat * radians) * Math.cos(second.lat * radians) * Math.sin(dlon / 2) ** 2;
     return 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(Math.max(0, 1 - h)));
   }
+  function travelEstimateKm(km, mode) {
+    if (!Number.isFinite(Number(km)) || Number(km) < 0) return null;
+    var roadKm = Number(km) * (mode === 'walk' ? 1.2 : 1.35), low, high;
+    if (mode === 'walk') { low = roadKm / 4.5 * 60; high = roadKm / 3.4 * 60; }
+    else { low = roadKm / 24 * 60; high = roadKm / 12 * 60; }
+    return { roadKm: roadKm, minMinutes: Math.max(1, Math.round(low)), maxMinutes: Math.max(2, Math.round(high)), basis: '粗略规划范围；按直线距离放大估算，未计实时路况、等车、停车或步行入园。' };
+  }
   function regionOf(p) {
     if (!p) return '';
     var raw = p.raw || p, coord = coordinates(p), identity = normalized([p.name, raw.address].join(' '));
@@ -325,7 +332,7 @@
     });
     return links;
   }
-  var api = { normalizeTrip: normalizeTrip, getDayItems: getDayItems, addToDay: addToDay, moveItem: moveItem, removeItem: removeItem, replaceItem: replaceItem, timelineWarnings: timelineWarnings, regionWarnings: regionWarnings, regionOf: regionOf, recommend: recommend, routeLinks: routeLinks, distanceKm: distanceKm, coordinates: coordinates, suggestedDuration: suggestedDuration, validTime: validTime, cityOf: cityOf };
+  var api = { normalizeTrip: normalizeTrip, getDayItems: getDayItems, addToDay: addToDay, moveItem: moveItem, removeItem: removeItem, replaceItem: replaceItem, timelineWarnings: timelineWarnings, regionWarnings: regionWarnings, regionOf: regionOf, recommend: recommend, routeLinks: routeLinks, distanceKm: distanceKm, travelEstimateKm: travelEstimateKm, coordinates: coordinates, suggestedDuration: suggestedDuration, validTime: validTime, cityOf: cityOf };
   root.PocketPlanner = api;
   if (typeof module === 'object' && module.exports) module.exports = api;
 }(typeof window !== 'undefined' ? window : globalThis));

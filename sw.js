@@ -1,6 +1,6 @@
-const CACHE = "vietnam-pocket-v7-journey";
+const CACHE = "vietnam-pocket-v8-field";
 const CACHE_PREFIX = "vietnam-pocket-";
-const CORE = ["./", "./index.html", "./style.css?v=journey-7", "./app.js?v=journey-7", "./data.js?v=journey-7", "./search.js?v=journey-7", "./standalone.js?v=journey-7", "./maps.js?v=journey-7", "./maps.css?v=journey-7", "./planner.js?v=journey-7", "./journey-ui.js?v=journey-7", "./journey-ui.css?v=journey-7", "./travel-tools.js?v=journey-7", "./travel-tools.css?v=journey-7", "./manifest.json", "./icon-192.png", "./icon.png"];
+const CORE = ["./", "./index.html", "./style.css?v=journey-8", "./app.js?v=journey-8", "./data.js?v=journey-8", "./search.js?v=journey-8", "./standalone.js?v=journey-8", "./maps.js?v=journey-8", "./maps.css?v=journey-8", "./planner.js?v=journey-8", "./journey-ui.js?v=journey-8", "./journey-ui.css?v=journey-8", "./travel-tools.js?v=journey-8", "./travel-tools.css?v=journey-8", "./manifest.json", "./icon-192.png", "./icon.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(CORE.map((url) => new Request(url, { cache: "reload" })))).then(() => self.skipWaiting()));

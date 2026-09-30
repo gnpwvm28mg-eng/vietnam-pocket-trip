@@ -219,6 +219,15 @@ body.is-discover .hero p,body.is-discover .hero-meta { display:none; }
 .essential-row { margin-bottom:9px; padding:13px 14px; border:1px solid #e3e6db; border-radius:11px; background:#fffef9; }
 .essential-row strong { display:block; color:#688260; font-size:12px; font-weight:600; }
 .essential-row p { margin:5px 0 0; color:#788373; font-size:11px; line-height:1.7; }
+.departure-checklist { margin:10px 0 15px;padding:12px 14px;border:1px solid #dfe7da;border-radius:11px;background:#f3f7ef;color:var(--teal); }
+.departure-checklist summary { display:flex;justify-content:space-between;gap:8px;align-items:center;cursor:pointer;font-size:12px;font-weight:600; }
+.departure-checklist summary small { color:var(--muted);font-size:10px;font-weight:400; }
+.departure-check-items { display:grid;gap:10px;margin-top:12px; }
+.departure-check-items label { display:flex;align-items:flex-start;gap:9px; }
+.departure-check-items input { flex:none;width:18px;height:18px;margin:1px 0;accent-color:var(--teal); }
+.departure-check-items span { min-width:0; }
+.departure-check-items strong,.departure-check-items small { display:block;font-size:11px;line-height:1.6; }
+.departure-check-items small { color:var(--muted);font-size:10px; }
 .form-field { display:block; margin-top:17px; }
 .form-field > span { display:block; margin-bottom:8px; color:#849377; font-size:11px; }
 .form-field input,.form-field textarea { display:block; width:100%; min-width:0; padding:10px 12px; border:1px solid #dfe5d6; border-radius:9px; color:#496747; background:#f7f9f0; font-size:13px; line-height:1.7; }

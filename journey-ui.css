@@ -7,6 +7,12 @@
 .journey-adjust summary {font-size:11px;color:var(--muted);cursor:pointer;min-height:28px;}
 .journey-adjust .journey-order {border-top:0;margin:0;flex-wrap:wrap;}
 .return-details {padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--paper);margin:12px 0;}
+.trip-estimate { display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 10px;margin:10px 0;padding:11px 13px;border:1px solid #e1e7db;border-radius:10px;background:#f5f7ef; }
+.trip-estimate div { min-width:0; }
+.trip-estimate strong,.trip-estimate span,.trip-estimate small { display:block;font-size:10px;line-height:1.6; }
+.trip-estimate span,.trip-estimate small { color:var(--muted);overflow-wrap:anywhere; }
+.trip-estimate b { align-self:center;font-size:12px;white-space:nowrap;color:var(--teal); }
+.trip-estimate small { grid-column:1/-1; }
 .return-details h3 {font-size:14px;margin:0 0 12px;}
 .return-details p {font-size:12px;line-height:1.8;white-space:pre-line;}
 .journey-warning-box,.region-route {border:1px solid #e3dfc9;border-radius:12px;padding:12px 14px;margin:12px 0;background:#fcf8ec;color:#7f714e;font-size:11px;}
